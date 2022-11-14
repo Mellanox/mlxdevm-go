@@ -368,8 +368,8 @@ func parseDevLinkAllPortList(msgs [][]byte) ([]*DevlinkPort, error) {
 
 // DevLinkGetPortList provides a pointer to devlink ports and nil error,
 // otherwise returns an error code.
-func (h *Handle) DevLinkGetAllPortList() ([]*DevlinkPort, error) {
-	f, err := h.GenlFamilyGet(GENL_DEVLINK_NAME)
+func (h *Handle) DevLinkGetAllPortList(Socket string) ([]*DevlinkPort, error) {
+	f, err := h.GenlFamilyGet(Socket)
 	if err != nil {
 		return nil, err
 	}
@@ -393,8 +393,8 @@ func (h *Handle) DevLinkGetAllPortList() ([]*DevlinkPort, error) {
 
 // DevLinkGetPortList provides a pointer to devlink ports and nil error,
 // otherwise returns an error code.
-func DevLinkGetAllPortList() ([]*DevlinkPort, error) {
-	return pkgHandle.DevLinkGetAllPortList()
+func DevLinkGetAllPortList(Socket string) ([]*DevlinkPort, error) {
+	return pkgHandle.DevLinkGetAllPortList(Socket)
 }
 
 func parseDevlinkPortMsg(msgs [][]byte) (*DevlinkPort, error) {
