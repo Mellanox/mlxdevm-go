@@ -44,7 +44,7 @@ func TestDevLinkGetDeviceByName(t *testing.T) {
 }
 
 func TestDevLinkGetAllPortList(t *testing.T) {
-	ports, err := DevLinkGetAllPortList()
+	ports, err := DevLinkGetAllPortList(socket)
 	if err != nil {
 		t.Fatal(err)
 	}
