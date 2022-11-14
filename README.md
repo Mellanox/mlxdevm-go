@@ -33,6 +33,7 @@ func main() {
     portAttr.PfNumber = 0
     
     portAttr.SfNumber = 88 // Any number starting 0 to 999
+    portAttr.SfNumberValid = true
     // To use upstream devlink interface
     dl_port, err := mlxdevm.DevLinkPortAdd("devlink", "pci", "0000:06:00.0", mlxdevm.DEVLINK_PORT_FLAVOUR_PCI_SF, portAttr)
     if err != nil {
