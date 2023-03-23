@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package mlxdevm
@@ -133,6 +134,55 @@ func TestDevLinkSfPortFnSet(t *testing.T) {
 	err2 = DevLinkPortDel(socket, dev.BusName, dev.DeviceName, port.PortIndex)
 	if err2 != nil {
 		t.Fatal(err2)
+	}
+}
+
+func TestDevlinkPortFnCapSet(t *testing.T) {
+	err := validateArgs(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dev, err := DevLinkGetDeviceByName(socket, bus, device)
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	portIndex := uint32(0)
+
+	testCases := []struct {
+		name        string
+		fnCapAttrs  DevlinkPortFnCapSetAttrs
+		errExpected bool
+	}{
+		{
+			name: "Roce true, max_uc_macs 64",
+			fnCapAttrs: DevlinkPortFnCapSetAttrs{
+				RoceValid:   true,
+				FnCapAttrs:  DevlinkPortFnCap{Roce: true, UCList: 64},
+				UCListValid: true,
+			},
+			errExpected: false,
+		},
+		{
+			name: "Roce false, max_uc_macs 128",
+			fnCapAttrs: DevlinkPortFnCapSetAttrs{
+				RoceValid:   true,
+				FnCapAttrs:  DevlinkPortFnCap{Roce: false, UCList: 128},
+				UCListValid: true,
+			},
+			errExpected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := pkgHandle.DevlinkPortFnCapSet(socket, dev.BusName, dev.DeviceName, portIndex, tc.fnCapAttrs)
+			if (err != nil) != tc.errExpected {
+				t.Fatalf("Expected error: %v, got: %v", tc.errExpected, err)
+			}
+		})
 	}
 }
 
