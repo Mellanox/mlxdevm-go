@@ -41,6 +41,19 @@ type DevlinkPortFnSetAttrs struct {
 	StateValid  bool
 }
 
+// DevlinkPortFnCap represents port function and its attributes
+type DevlinkPortFnCap struct {
+	Roce   bool
+	UCList uint32
+}
+
+// DevlinkPortFnCapSetAttrs represents attributes to set
+type DevlinkPortFnCapSetAttrs struct {
+	FnCapAttrs  DevlinkPortFnCap
+	RoceValid   bool
+	UCListValid bool
+}
+
 // DevlinkPort represents port and its attributes
 type DevlinkPort struct {
 	BusName        string
@@ -52,6 +65,7 @@ type DevlinkPort struct {
 	RdmaDeviceName string
 	PortFlavour    uint16
 	Fn             *DevlinkPortFn
+	PortCap        *DevlinkPortFnCap
 }
 
 type DevLinkPortAddAttrs struct {
@@ -333,16 +347,37 @@ func (port *DevlinkPort) parseAttributes(attrs []syscall.NetlinkRouteAttr) error
 			port.RdmaDeviceName = string(a.Value[:len(a.Value)-1])
 		case DEVLINK_ATTR_PORT_FLAVOUR:
 			port.PortFlavour = native.Uint16(a.Value)
-		case DEVLINK_ATTR_PORT_FUNCTION:
-			port.Fn = &DevlinkPortFn{}
-			for nested := range nl.ParseAttributes(a.Value) {
-				switch nested.Type {
-				case DEVLINK_PORT_FUNCTION_ATTR_HW_ADDR:
-					port.Fn.HwAddr = nested.Value[:]
-				case DEVLINK_PORT_FN_ATTR_STATE:
-					port.Fn.State = uint8(nested.Value[0])
-				case DEVLINK_PORT_FN_ATTR_OPSTATE:
-					port.Fn.OpState = uint8(nested.Value[0])
+		default:
+			// All nested attributes are located together
+			if a.Attr.Type&unix.NLA_F_NESTED != 0 {
+				for nested := range nl.ParseAttributes(a.Value) {
+					switch nested.Type {
+					case DEVLINK_PORT_FUNCTION_ATTR_HW_ADDR:
+						if port.Fn == nil {
+							port.Fn = &DevlinkPortFn{}
+						}
+						port.Fn.HwAddr = nested.Value[:]
+					case DEVLINK_PORT_FN_ATTR_STATE:
+						if port.Fn == nil {
+							port.Fn = &DevlinkPortFn{}
+						}
+						port.Fn.State = uint8(nested.Value[0])
+					case DEVLINK_PORT_FN_ATTR_OPSTATE:
+						if port.Fn == nil {
+							port.Fn = &DevlinkPortFn{}
+						}
+						port.Fn.OpState = uint8(nested.Value[0])
+					case DEVLINK_PORT_FN_ATTR_EXT_CAP_ROCE:
+						if port.PortCap == nil {
+							port.PortCap = &DevlinkPortFnCap{}
+						}
+						port.PortCap.Roce = uint8(nested.Value[0]) != 0
+					case DEVLINK_PORT_FN_ATTR_EXT_CAP_UC_LIST:
+						if port.PortCap == nil {
+							port.PortCap = &DevlinkPortFnCap{}
+						}
+						port.PortCap.UCList = uint32(nested.Value[0])
+					}
 				}
 			}
 		}
@@ -517,4 +552,43 @@ func (h *Handle) DevlinkPortFnSet(Socket string, Bus string, Device string, Port
 // It returns 0 on success or error code.
 func DevlinkPortFnSet(Socket string, Bus string, Device string, PortIndex uint32, FnAttrs DevlinkPortFnSetAttrs) error {
 	return pkgHandle.DevlinkPortFnSet(Socket, Bus, Device, PortIndex, FnAttrs)
+}
+
+// DevlinkPortFnCapSet sets roce and max_uc_macs port function cap attributes.
+// It returns 0 on success or error code.
+// Equivalent to: `mlxdevm port function cap sep $port roce true max_uc_macs 64`
+// Equivalent to: `mlxdevm port function cap sep $port roce false max_uc_macs 128`
+func (h *Handle) DevlinkPortFnCapSet(Socket string, Bus string, Device string, PortIndex uint32, FnCapAttrs DevlinkPortFnCapSetAttrs) error {
+	_, req, err := h.createCmdReq(Socket, DEVLINK_CMD_EXT_CAP_SET, Bus, Device)
+	if err != nil {
+		return err
+	}
+
+	req.AddData(nl.NewRtAttr(DEVLINK_ATTR_PORT_INDEX, nl.Uint32Attr(PortIndex)))
+
+	fnAttr := nl.NewRtAttr(DEVLINK_ATTR_EXT_PORT_FN_CAP|unix.NLA_F_NESTED, nil)
+
+	if FnCapAttrs.RoceValid {
+		roce := uint8(0)
+		if FnCapAttrs.FnCapAttrs.Roce {
+			roce = 1
+		}
+		fnAttr.AddRtAttr(DEVLINK_PORT_FN_ATTR_EXT_CAP_ROCE, nl.Uint8Attr(roce))
+	}
+
+	if FnCapAttrs.UCListValid == true {
+		fnAttr.AddRtAttr(DEVLINK_PORT_FN_ATTR_EXT_CAP_UC_LIST, nl.Uint32Attr(FnCapAttrs.FnCapAttrs.UCList))
+	}
+	req.AddData(fnAttr)
+
+	_, err = req.Execute(unix.NETLINK_GENERIC, 0)
+	return err
+}
+
+// DevlinkPortFnCapSet sets roce and max_uc_macs port function cap attributes.
+// It returns 0 on success or error code.
+// Equivalent to: `mlxdevm port function cap sep $port roce true max_uc_macs 64`
+// Equivalent to: `mlxdevm port function cap sep $port roce false max_uc_macs 128`
+func DevlinkPortFnCapSet(Socket string, Bus string, Device string, PortIndex uint32, FnCapAttrs DevlinkPortFnCapSetAttrs) error {
+	return pkgHandle.DevlinkPortFnCapSet(Socket, Bus, Device, PortIndex, FnCapAttrs)
 }
