@@ -186,6 +186,58 @@ func TestDevlinkPortFnCapSet(t *testing.T) {
 	}
 }
 
+func TestDevlinkDevParamSet(t *testing.T) {
+	err := validateArgs(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dev, err := DevLinkGetDeviceByName(socket, bus, device)
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	testCases := []struct {
+		name        string
+		paramName   string
+		newValue    string
+		newCMode    string
+		errExpected bool
+	}{
+		{
+			name:        "Set disable_netdev true, cmode runtime",
+			paramName:   "disable_netdev",
+			newValue:    "true",
+			newCMode:    "runtime",
+			errExpected: false,
+		},
+		{
+			name:        "Set disable_netdev false, cmode runtime",
+			paramName:   "disable_netdev",
+			newValue:    "false",
+			newCMode:    "runtime",
+			errExpected: false,
+		},
+		{
+			name:        "Set disable_netdev false, cmode runtime",
+			paramName:   "disable_netdev",
+			newValue:    "arbitrary value",
+			newCMode:    "runtime",
+			errExpected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := pkgHandle.DevlinkDevParamSet(socket, dev.BusName, dev.DeviceName, tc.paramName, tc.newValue, tc.newCMode)
+			if (err != nil) != tc.errExpected {
+				t.Fatalf("Expected error: %v, got: %v", tc.errExpected, err)
+			}
+		})
+	}
+}
+
 var socket string
 var bus string
 var device string

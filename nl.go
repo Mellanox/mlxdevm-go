@@ -1,7 +1,5 @@
 package mlxdevm
 
-import "C"
-
 // All the following constants are coming from:
 // https://github.com/torvalds/linux/blob/master/include/uapi/linux/devlink.h
 
