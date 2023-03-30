@@ -6,6 +6,7 @@ import (
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
 	"net"
+	"strconv"
 	"syscall"
 )
 
@@ -662,4 +663,99 @@ func (h *Handle) DevlinkDevParamGet(Socket string, Bus string, Device string, Pa
 // Equivalent to `mlxdevm dev param show $dev name disable_netdev`
 func DevlinkDevParamGet(Socket string, Bus string, Device string, ParamName string) (*DevlinkDevParam, error) {
 	return pkgHandle.DevlinkDevParamGet(Socket, Bus, Device, ParamName)
+}
+
+func cmodeStringToMode(modeName string) (uint8, error) {
+	if modeName == "runtime" {
+		return DEVLINK_PARAM_CMODE_RUNTIME, nil
+	} else if modeName == "driverinit" {
+		return DEVLINK_PARAM_CMODE_DRIVERINIT, nil
+	} else {
+		return 0xff, fmt.Errorf("invalid cmode")
+	}
+}
+
+// DevlinkDevParamSet sets one device parameter.
+// It returns 0 on success or error code.
+// Equivalent to: `mlxdevm dev param set $dev name disable_netdev value true cmode runtime`
+func (h *Handle) DevlinkDevParamSet(Socket string, Bus string, Device string, ParamName string, NewValue string, NewCMode string) error {
+	_, req, err := h.createCmdReq(Socket, DEVLINK_CMD_PARAM_GET, Bus, Device)
+	if err != nil {
+		return err
+	}
+
+	b := make([]byte, len(ParamName)+1)
+	copy(b, ParamName)
+	req.AddData(nl.NewRtAttr(DEVLINK_ATTR_PARAM_NAME, b))
+
+	respmsg, err := req.Execute(unix.NETLINK_GENERIC, 0)
+	if err != nil {
+		return err
+	}
+
+	setParam := parseDevParam(respmsg[0][nl.SizeofGenlmsg:])
+
+	mode, err := cmodeStringToMode(NewCMode)
+	if err != nil {
+		return err
+	}
+
+	_, req, err = h.createCmdReq(Socket, DEVLINK_CMD_PARAM_SET, Bus, Device)
+	if err != nil {
+		return err
+	}
+
+	b = make([]byte, len(ParamName)+1)
+	copy(b, ParamName)
+	req.AddData(nl.NewRtAttr(DEVLINK_ATTR_PARAM_NAME, b))
+
+	req.AddData(nl.NewRtAttr(DEVLINK_ATTR_PARAM_VALUE_CMODE, nl.Uint8Attr(mode)))
+	req.AddData(nl.NewRtAttr(DEVLINK_ATTR_PARAM_TYPE, nl.Uint8Attr(uint8(setParam.Attribute.Type))))
+
+	switch setParam.Attribute.Type {
+	case MNL_TYPE_U8, MNL_TYPE_U16, MNL_TYPE_U32, MNL_TYPE_U64:
+		if val, err := strconv.Atoi(NewValue); err != nil {
+			return err
+		} else {
+			switch setParam.Attribute.Type {
+			case MNL_TYPE_U8:
+				req.AddData(nl.NewRtAttr(DEVLINK_ATTR_PARAM_VALUE_DATA, nl.Uint8Attr(uint8(val))))
+			case MNL_TYPE_U16:
+				req.AddData(nl.NewRtAttr(DEVLINK_ATTR_PARAM_VALUE_DATA, nl.Uint16Attr(uint16(val))))
+			case MNL_TYPE_U32:
+				req.AddData(nl.NewRtAttr(DEVLINK_ATTR_PARAM_VALUE_DATA, nl.Uint32Attr(uint32(val))))
+			case MNL_TYPE_U64:
+				req.AddData(nl.NewRtAttr(DEVLINK_ATTR_PARAM_VALUE_DATA, nl.Uint64Attr(uint64(val))))
+			}
+		}
+	case MNL_TYPE_STRING:
+		b := make([]byte, len(NewValue)+1)
+		copy(b, NewValue)
+		req.AddData(nl.NewRtAttr(DEVLINK_ATTR_PARAM_VALUE_DATA, b))
+	case MNL_TYPE_FLAG:
+		if NewValue != "true" && NewValue != "false" {
+			return fmt.Errorf("invalid value for the flag parameter. Should be true/false")
+		}
+
+		if NewValue == "true" {
+			// To pass the true flag value, we need to add an empty VALUE_DATE field
+			// for the false value, the field should not be present
+			req.AddData(nl.NewRtAttr(DEVLINK_ATTR_PARAM_VALUE_DATA, []byte{}))
+		}
+	}
+
+	_, err = req.Execute(unix.NETLINK_GENERIC, 0)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(err)
+	return err
+}
+
+// DevlinkDevParamSet sets one device parameter.
+// It returns 0 on success or error code.
+// Equivalent to: `mlxdevm dev param set $dev name disable_netdev value true cmode runtime`
+func DevlinkDevParamSet(Socket string, Bus string, Device string, ParamName string, NewValue string, NewCMode string) error {
+	return pkgHandle.DevlinkDevParamSet(Socket, Bus, Device, ParamName, NewValue, NewCMode)
 }
