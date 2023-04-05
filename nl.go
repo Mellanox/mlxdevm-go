@@ -1,5 +1,7 @@
 package mlxdevm
 
+import "C"
+
 // All the following constants are coming from:
 // https://github.com/torvalds/linux/blob/master/include/uapi/linux/devlink.h
 
@@ -17,6 +19,8 @@ const (
 	DEVLINK_CMD_PORT_DEL    = 8
 	DEVLINK_CMD_ESWITCH_GET = 29
 	DEVLINK_CMD_ESWITCH_SET = 30
+	DEVLINK_CMD_PARAM_GET   = 38
+	DEVLINK_CMD_PARAM_SET   = 39
 	DEVLINK_CMD_EXT_CAP_SET = 161
 )
 
@@ -32,11 +36,20 @@ const (
 	DEVLINK_ATTR_ESWITCH_INLINE_MODE    = 26
 	DEVLINK_ATTR_ESWITCH_ENCAP_MODE     = 62
 	DEVLINK_ATTR_PORT_FLAVOUR           = 77
+	DEVLINK_ATTR_PARAM                  = 80 /* nested */
+	DEVLINK_ATTR_PARAM_NAME             = 81 /* string */
+	DEVLINK_ATTR_PARAM_GENERIC          = 82 /* flag */
+	DEVLINK_ATTR_PARAM_TYPE             = 83 /* u8 */
+	DEVLINK_ATTR_PARAM_VALUES_LIST      = 84 /* nested */
+	DEVLINK_ATTR_PARAM_VALUE            = 85 /* nested */
+	DEVLINK_ATTR_PARAM_VALUE_DATA       = 86 /* dynamic */
+	DEVLINK_ATTR_PARAM_VALUE_CMODE      = 87 /* u8 */
 	DEVLINK_ATTR_PORT_PCI_PF_NUMBER     = 127
 	DEVLINK_ATTR_PORT_FUNCTION          = 145
 	DEVLINK_ATTR_PORT_CONTROLLER_NUMBER = 150
 	DEVLINK_ATTR_PORT_PCI_SF_NUMBER     = 164
 	DEVLINK_ATTR_EXT_PORT_FN_CAP        = 8193
+	DEVLINK_ATTR_MAX                    = 8201
 )
 
 const (
@@ -93,4 +106,24 @@ const (
 const (
 	DEVLINK_PORT_FN_ATTR_EXT_CAP_ROCE    = 161
 	DEVLINK_PORT_FN_ATTR_EXT_CAP_UC_LIST = 162
+)
+
+const (
+	DEVLINK_PARAM_CMODE_RUNTIME    = 0
+	DEVLINK_PARAM_CMODE_DRIVERINIT = 1
+)
+
+const (
+	MNL_TYPE_U8            = 1
+	MNL_TYPE_U16           = 2
+	MNL_TYPE_U32           = 3
+	MNL_TYPE_U64           = 4
+	MNL_TYPE_STRING        = 5
+	MNL_TYPE_FLAG          = 6
+	MNL_TYPE_MSECS         = 7
+	MNL_TYPE_NESTED        = 8
+	MNL_TYPE_NESTED_COMPAT = 9
+	MNL_TYPE_NUL_STRING    = 10
+	MNL_TYPE_BINARY        = 11
+	MNL_TYPE_MAX           = 12
 )
