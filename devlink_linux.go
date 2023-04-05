@@ -1,6 +1,7 @@
 package mlxdevm
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
@@ -52,6 +53,13 @@ type DevlinkPortFnCapSetAttrs struct {
 	FnCapAttrs  DevlinkPortFnCap
 	RoceValid   bool
 	UCListValid bool
+}
+
+// DevlinkDevParam represents a device parameter
+type DevlinkDevParam struct {
+	Name      string
+	Attribute nl.Attribute
+	CMode     uint8
 }
 
 // DevlinkPort represents port and its attributes
@@ -591,4 +599,67 @@ func (h *Handle) DevlinkPortFnCapSet(Socket string, Bus string, Device string, P
 // Equivalent to: `mlxdevm port function cap sep $port roce false max_uc_macs 128`
 func DevlinkPortFnCapSet(Socket string, Bus string, Device string, PortIndex uint32, FnCapAttrs DevlinkPortFnCapSetAttrs) error {
 	return pkgHandle.DevlinkPortFnCapSet(Socket, Bus, Device, PortIndex, FnCapAttrs)
+}
+
+func parseDevParam(data []byte) *DevlinkDevParam {
+	param := DevlinkDevParam{}
+	var stack [][]byte
+	stack = append(stack, data)
+
+	for len(stack) > 0 {
+		data = stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+
+		for a := range nl.ParseAttributes(data) {
+			switch a.Type {
+			case DEVLINK_ATTR_PARAM_NAME:
+				param.Name = string(a.Value[:len(a.Value)-1])
+			case DEVLINK_ATTR_PARAM_TYPE:
+				param.Attribute.Type = uint16(a.Value[0])
+			case DEVLINK_ATTR_PARAM_VALUE_CMODE:
+				param.CMode = a.Value[0]
+			case DEVLINK_ATTR_PARAM_VALUE_DATA:
+				param.Attribute.Value = a.Value
+			case DEVLINK_ATTR_PARAM_VALUE | unix.NLA_F_NESTED:
+				if param.Attribute.Type == MNL_TYPE_FLAG {
+					value := 0
+					if bytes.Contains(a.Value, []byte{4, 0, DEVLINK_ATTR_PARAM_VALUE_DATA, 0}) {
+						value = 1
+					}
+					param.Attribute.Value = []byte{uint8(value)}
+				}
+			}
+			if a.Type&unix.NLA_F_NESTED != 0 {
+				stack = append(stack, a.Value)
+			}
+		}
+	}
+
+	return &param
+}
+
+// DevlinkDevParamGet returns information about a set device parameter
+// Equivalent to `mlxdevm dev param show $dev name disable_netdev`
+func (h *Handle) DevlinkDevParamGet(Socket string, Bus string, Device string, ParamName string) (*DevlinkDevParam, error) {
+	_, req, err := h.createCmdReq(Socket, DEVLINK_CMD_PARAM_GET, Bus, Device)
+	if err != nil {
+		return nil, err
+	}
+
+	b := make([]byte, len(ParamName)+1)
+	copy(b, ParamName)
+	req.AddData(nl.NewRtAttr(DEVLINK_ATTR_PARAM_NAME, b))
+
+	respmsg, err := req.Execute(unix.NETLINK_GENERIC, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseDevParam(respmsg[0][nl.SizeofGenlmsg:]), nil
+}
+
+// DevlinkDevParamGet returns information about a set device parameter
+// Equivalent to `mlxdevm dev param show $dev name disable_netdev`
+func DevlinkDevParamGet(Socket string, Bus string, Device string, ParamName string) (*DevlinkDevParam, error) {
+	return pkgHandle.DevlinkDevParamGet(Socket, Bus, Device, ParamName)
 }
