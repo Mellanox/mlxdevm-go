@@ -3,11 +3,12 @@ package mlxdevm
 import (
 	"bytes"
 	"fmt"
-	"github.com/vishvananda/netlink/nl"
-	"golang.org/x/sys/unix"
 	"net"
 	"strconv"
 	"syscall"
+
+	"github.com/vishvananda/netlink/nl"
+	"golang.org/x/sys/unix"
 )
 
 // DevlinkDevEswitchAttr represents device's eswitch attributes
@@ -179,7 +180,7 @@ func (dev *DevlinkDevice) parseEswitchAttrs(msgs [][]byte) {
 	if err != nil {
 		return
 	}
-	dev.parseAttributes(attrs)
+	_ = dev.parseAttributes(attrs)
 }
 
 func (h *Handle) getEswitchAttrs(family *GenlFamily, dev *DevlinkDevice) {
@@ -544,11 +545,11 @@ func (h *Handle) DevlinkPortFnSet(Socket string, Bus string, Device string, Port
 
 	fnAttr := nl.NewRtAttr(DEVLINK_ATTR_PORT_FUNCTION|unix.NLA_F_NESTED, nil)
 
-	if FnAttrs.HwAddrValid == true {
+	if FnAttrs.HwAddrValid {
 		fnAttr.AddRtAttr(DEVLINK_PORT_FUNCTION_ATTR_HW_ADDR, []byte(FnAttrs.FnAttrs.HwAddr))
 	}
 
-	if FnAttrs.StateValid == true {
+	if FnAttrs.StateValid {
 		fnAttr.AddRtAttr(DEVLINK_PORT_FN_ATTR_STATE, nl.Uint8Attr(FnAttrs.FnAttrs.State))
 	}
 	req.AddData(fnAttr)
@@ -585,7 +586,7 @@ func (h *Handle) DevlinkPortFnCapSet(Socket string, Bus string, Device string, P
 		fnAttr.AddRtAttr(DEVLINK_PORT_FN_ATTR_EXT_CAP_ROCE, nl.Uint8Attr(roce))
 	}
 
-	if FnCapAttrs.UCListValid == true {
+	if FnCapAttrs.UCListValid {
 		fnAttr.AddRtAttr(DEVLINK_PORT_FN_ATTR_EXT_CAP_UC_LIST, nl.Uint32Attr(FnCapAttrs.FnCapAttrs.UCList))
 	}
 	req.AddData(fnAttr)
