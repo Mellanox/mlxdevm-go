@@ -17,8 +17,7 @@ var pkgHandle = &Handle{}
 // same netlink family share the same netlink socket,
 // which gets released when the handle is deleted.
 type Handle struct {
-	sockets      map[int]*nl.SocketHandle
-	lookupByDump bool
+	sockets map[int]*nl.SocketHandle
 }
 
 // SetSocketTimeout configures timeout for default netlink sockets
