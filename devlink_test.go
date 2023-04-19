@@ -54,7 +54,9 @@ func TestDevLinkGetAllPortList(t *testing.T) {
 	}
 	t.Log("devlink port count = ", len(ports))
 	for _, port := range ports {
-		t.Log(*port)
+		t.Logf("Port: %+v", *port)
+		t.Logf("Port Function: %+v", *port.Fn)
+		t.Logf("Port Function Cap: %+v", *port.PortCap)
 	}
 }
 
