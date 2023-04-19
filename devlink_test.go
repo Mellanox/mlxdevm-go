@@ -9,6 +9,8 @@ import (
 	"net"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func validateArgs(t *testing.T) error {
@@ -75,10 +77,20 @@ func TestDevLinkAddDelSfPort(t *testing.T) {
 		t.Fatal(err2)
 		return
 	}
-	t.Log(*port)
+	t.Logf("Port: %+v", *port)
 	if port.Fn != nil {
-		t.Log("function attributes = ", *port.Fn)
+		t.Logf("Port Function Attributes: %+v", *port.Fn)
 	}
+
+	if port.PortCap != nil {
+		t.Logf("Port Function Cap: %+v", *port.PortCap)
+	}
+
+	assert := assert.New(t)
+	assert.Equal(uint32(0), port.Controller, "miss matching controller number")
+	assert.Equal(uint16(0), port.PfNumber, "miss-matching PF number")
+	assert.Equal(addAttrs.SfNumber, port.SfNumber, "miss-matching SF number")
+
 	err2 = DevLinkPortDel(socket, dev.BusName, dev.DeviceName, port.PortIndex)
 	if err2 != nil {
 		t.Fatal(err2)
@@ -139,9 +151,9 @@ func TestDevLinkSfPortFnSet(t *testing.T) {
 }
 
 func TestDevlinkPortFnCapSet(t *testing.T) {
-    if os.Getenv("CI") != "" {
-      t.Skip("Skipping test TestDevlinkPortFnCapSet in CI environment until test is fixed")
-    }
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping test TestDevlinkPortFnCapSet in CI environment until test is fixed")
+	}
 
 	err := validateArgs(t)
 	if err != nil {
@@ -192,9 +204,9 @@ func TestDevlinkPortFnCapSet(t *testing.T) {
 }
 
 func TestDevlinkDevParamSet(t *testing.T) {
-    if os.Getenv("CI") != "" {
-      t.Skip("Skipping test TestDevlinkDevParamSet in CI environment until test is fixed")
-    }
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping test TestDevlinkDevParamSet in CI environment until test is fixed")
+	}
 
 	err := validateArgs(t)
 	if err != nil {
