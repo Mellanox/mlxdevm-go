@@ -29,26 +29,26 @@ func validateArgs(t *testing.T) error {
 	return nil
 }
 
-func TestDevLinkGetDeviceList(t *testing.T) {
-	_, err := DevLinkGetDeviceList(socket)
+func TestDevlinkGetDeviceList(t *testing.T) {
+	_, err := DevlinkGetDeviceList(socket)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestDevLinkGetDeviceByName(t *testing.T) {
+func TestDevlinkGetDeviceByName(t *testing.T) {
 	err := validateArgs(t)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = DevLinkGetDeviceByName(socket, bus, device)
+	_, err = DevlinkGetDeviceByName(socket, bus, device)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestDevLinkGetAllPortList(t *testing.T) {
-	ports, err := DevLinkGetAllPortList(socket)
+func TestDevlinkGetAllPortList(t *testing.T) {
+	ports, err := DevlinkGetAllPortList(socket)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,13 +58,13 @@ func TestDevLinkGetAllPortList(t *testing.T) {
 	}
 }
 
-func TestDevLinkAddDelSfPort(t *testing.T) {
-	var addAttrs DevLinkPortAddAttrs
+func TestDevlinkAddDelSfPort(t *testing.T) {
+	var addAttrs DevlinkPortAddAttrs
 	err := validateArgs(t)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dev, err := DevLinkGetDeviceByName(socket, bus, device)
+	dev, err := DevlinkGetDeviceByName(socket, bus, device)
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -72,7 +72,7 @@ func TestDevLinkAddDelSfPort(t *testing.T) {
 	addAttrs.SfNumberValid = true
 	addAttrs.SfNumber = uint32(sfnum)
 	addAttrs.PfNumber = 0
-	port, err2 := DevLinkPortAdd(socket, dev.BusName, dev.DeviceName, 7, addAttrs)
+	port, err2 := DevlinkPortAdd(socket, dev.BusName, dev.DeviceName, 7, addAttrs)
 	if err2 != nil {
 		t.Fatal(err2)
 		return
@@ -91,21 +91,21 @@ func TestDevLinkAddDelSfPort(t *testing.T) {
 	assert.Equal(uint16(0), port.PfNumber, "miss-matching PF number")
 	assert.Equal(addAttrs.SfNumber, port.SfNumber, "miss-matching SF number")
 
-	err2 = DevLinkPortDel(socket, dev.BusName, dev.DeviceName, port.PortIndex)
+	err2 = DevlinkPortDel(socket, dev.BusName, dev.DeviceName, port.PortIndex)
 	if err2 != nil {
 		t.Fatal(err2)
 	}
 }
 
-func TestDevLinkSfPortFnSet(t *testing.T) {
-	var addAttrs DevLinkPortAddAttrs
+func TestDevlinkSfPortFnSet(t *testing.T) {
+	var addAttrs DevlinkPortAddAttrs
 	var stateAttr DevlinkPortFnSetAttrs
 
 	err := validateArgs(t)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dev, err := DevLinkGetDeviceByName(socket, bus, device)
+	dev, err := DevlinkGetDeviceByName(socket, bus, device)
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -113,7 +113,7 @@ func TestDevLinkSfPortFnSet(t *testing.T) {
 	addAttrs.SfNumberValid = true
 	addAttrs.SfNumber = uint32(sfnum)
 	addAttrs.PfNumber = 0
-	port, err2 := DevLinkPortAdd(socket, dev.BusName, dev.DeviceName, 7, addAttrs)
+	port, err2 := DevlinkPortAdd(socket, dev.BusName, dev.DeviceName, 7, addAttrs)
 	if err2 != nil {
 		t.Fatal(err2)
 		return
@@ -139,12 +139,12 @@ func TestDevLinkSfPortFnSet(t *testing.T) {
 		t.Log("function state set err = ", err2)
 	}
 
-	port, err3 := DevLinkGetPortByIndex(socket, dev.BusName, dev.DeviceName, port.PortIndex)
+	port, err3 := DevlinkGetPortByIndex(socket, dev.BusName, dev.DeviceName, port.PortIndex)
 	if err3 == nil {
 		t.Log(*port)
 		t.Log(*port.Fn)
 	}
-	err2 = DevLinkPortDel(socket, dev.BusName, dev.DeviceName, port.PortIndex)
+	err2 = DevlinkPortDel(socket, dev.BusName, dev.DeviceName, port.PortIndex)
 	if err2 != nil {
 		t.Fatal(err2)
 	}
@@ -160,7 +160,7 @@ func TestDevlinkPortFnCapSet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dev, err := DevLinkGetDeviceByName(socket, bus, device)
+	dev, err := DevlinkGetDeviceByName(socket, bus, device)
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -213,7 +213,7 @@ func TestDevlinkDevParamSet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dev, err := DevLinkGetDeviceByName(socket, bus, device)
+	dev, err := DevlinkGetDeviceByName(socket, bus, device)
 	if err != nil {
 		t.Fatal(err)
 		return
