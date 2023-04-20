@@ -74,6 +74,9 @@ type DevlinkPort struct {
 	NetdevIfIndex  uint32
 	RdmaDeviceName string
 	PortFlavour    uint16
+	Controller     uint32
+	PfNumber       uint16
+	SfNumber       uint32
 	Fn             *DevlinkPortFn
 	PortCap        *DevlinkPortFnCap
 }
@@ -357,6 +360,12 @@ func (port *DevlinkPort) parseAttributes(attrs []syscall.NetlinkRouteAttr) error
 			port.RdmaDeviceName = string(a.Value[:len(a.Value)-1])
 		case DEVLINK_ATTR_PORT_FLAVOUR:
 			port.PortFlavour = native.Uint16(a.Value)
+		case DEVLINK_ATTR_PORT_CONTROLLER_NUMBER:
+			port.Controller = native.Uint32(a.Value)
+		case DEVLINK_ATTR_PORT_PCI_PF_NUMBER:
+			port.PfNumber = native.Uint16(a.Value)
+		case DEVLINK_ATTR_PORT_PCI_SF_NUMBER:
+			port.SfNumber = native.Uint32(a.Value)
 		default:
 			// All nested attributes are located together
 			if a.Attr.Type&unix.NLA_F_NESTED != 0 {
