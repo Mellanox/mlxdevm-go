@@ -366,39 +366,38 @@ func (port *DevlinkPort) parseAttributes(attrs []syscall.NetlinkRouteAttr) error
 			port.PfNumber = native.Uint16(a.Value)
 		case DEVLINK_ATTR_PORT_PCI_SF_NUMBER:
 			port.SfNumber = native.Uint32(a.Value)
-		default:
-			// All nested attributes are located together
-			if a.Attr.Type&unix.NLA_F_NESTED != 0 {
-				for nested := range nl.ParseAttributes(a.Value) {
-					switch nested.Type {
-					case DEVLINK_PORT_FUNCTION_ATTR_HW_ADDR:
-						if port.Fn == nil {
-							port.Fn = &DevlinkPortFn{}
-						}
-						port.Fn.HwAddr = nested.Value[:]
-					case DEVLINK_PORT_FN_ATTR_STATE:
-						if port.Fn == nil {
-							port.Fn = &DevlinkPortFn{}
-						}
-						port.Fn.State = uint8(nested.Value[0])
-					case DEVLINK_PORT_FN_ATTR_OPSTATE:
-						if port.Fn == nil {
-							port.Fn = &DevlinkPortFn{}
-						}
-						port.Fn.OpState = uint8(nested.Value[0])
-					case DEVLINK_PORT_FN_ATTR_EXT_CAP_ROCE:
-						if port.PortCap == nil {
-							port.PortCap = &DevlinkPortFnCap{}
-						}
-						port.PortCap.Roce = uint8(nested.Value[0]) != 0
-					case DEVLINK_PORT_FN_ATTR_EXT_CAP_UC_LIST:
-						if port.PortCap == nil {
-							port.PortCap = &DevlinkPortFnCap{}
-						}
-						port.PortCap.UCList = uint32(nested.Value[0])
+		case DEVLINK_ATTR_PORT_FUNCTION | unix.NLA_F_NESTED:
+			for nested := range nl.ParseAttributes(a.Value) {
+				switch nested.Type {
+				case DEVLINK_PORT_FUNCTION_ATTR_HW_ADDR:
+					if port.Fn == nil {
+						port.Fn = &DevlinkPortFn{}
 					}
+					port.Fn.HwAddr = nested.Value[:]
+				case DEVLINK_PORT_FN_ATTR_STATE:
+					if port.Fn == nil {
+						port.Fn = &DevlinkPortFn{}
+					}
+					port.Fn.State = uint8(nested.Value[0])
+				case DEVLINK_PORT_FN_ATTR_OPSTATE:
+					if port.Fn == nil {
+						port.Fn = &DevlinkPortFn{}
+					}
+					port.Fn.OpState = uint8(nested.Value[0])
+				case DEVLINK_PORT_FN_ATTR_EXT_CAP_ROCE:
+					if port.PortCap == nil {
+						port.PortCap = &DevlinkPortFnCap{}
+					}
+					port.PortCap.Roce = uint8(nested.Value[0]) != 0
+				case DEVLINK_PORT_FN_ATTR_EXT_CAP_UC_LIST:
+					if port.PortCap == nil {
+						port.PortCap = &DevlinkPortFnCap{}
+					}
+					port.PortCap.UCList = uint32(nested.Value[0])
 				}
 			}
+		default:
+			continue
 		}
 	}
 	return nil
