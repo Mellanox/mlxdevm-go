@@ -81,7 +81,7 @@ type DevlinkPort struct {
 	PortCap        *DevlinkPortFnCap
 }
 
-type DevLinkPortAddAttrs struct {
+type DevlinkPortAddAttrs struct {
 	Controller      uint32
 	SfNumber        uint32
 	PortIndex       uint32
@@ -95,7 +95,7 @@ var (
 	native = nl.NativeEndian()
 )
 
-func parseDevLinkDeviceList(msgs [][]byte) ([]*DevlinkDevice, error) {
+func parseDevlinkDeviceList(msgs [][]byte) ([]*DevlinkDevice, error) {
 	devices := make([]*DevlinkDevice, 0, len(msgs))
 	for _, m := range msgs {
 		attrs, err := nl.ParseRouteAttr(m[nl.SizeofGenlmsg:])
@@ -211,9 +211,9 @@ func (h *Handle) getEswitchAttrs(family *GenlFamily, dev *DevlinkDevice) {
 	dev.parseEswitchAttrs(msgs)
 }
 
-// DevLinkGetDeviceList provides a pointer to devlink devices and nil error,
+// DevlinkGetDeviceList provides a pointer to devlink devices and nil error,
 // otherwise returns an error code.
-func (h *Handle) DevLinkGetDeviceList(Socket string) ([]*DevlinkDevice, error) {
+func (h *Handle) DevlinkGetDeviceList(Socket string) ([]*DevlinkDevice, error) {
 	f, err := h.GenlFamilyGet(Socket)
 	if err != nil {
 		return nil, err
@@ -229,7 +229,7 @@ func (h *Handle) DevLinkGetDeviceList(Socket string) ([]*DevlinkDevice, error) {
 	if err != nil {
 		return nil, err
 	}
-	devices, err := parseDevLinkDeviceList(msgs)
+	devices, err := parseDevlinkDeviceList(msgs)
 	if err != nil {
 		return nil, err
 	}
@@ -239,10 +239,10 @@ func (h *Handle) DevLinkGetDeviceList(Socket string) ([]*DevlinkDevice, error) {
 	return devices, nil
 }
 
-// DevLinkGetDeviceList provides a pointer to devlink devices and nil error,
+// DevlinkGetDeviceList provides a pointer to devlink devices and nil error,
 // otherwise returns an error code.
-func DevLinkGetDeviceList(Socket string) ([]*DevlinkDevice, error) {
-	return pkgHandle.DevLinkGetDeviceList(Socket)
+func DevlinkGetDeviceList(Socket string) ([]*DevlinkDevice, error) {
+	return pkgHandle.DevlinkGetDeviceList(Socket)
 }
 
 func parseDevlinkDevice(msgs [][]byte) (*DevlinkDevice, error) {
@@ -288,7 +288,7 @@ func (h *Handle) createCmdReq(Socket string, cmd uint8, bus string, device strin
 // DevlinkGetDeviceByName provides a pointer to devlink device and nil error,
 // otherwise returns an error code.
 // Take Socket as either GENL_DEVLINK_NAME or as GENL_MLXDEVM_NAME.
-func (h *Handle) DevLinkGetDeviceByName(Socket string, Bus string, Device string) (*DevlinkDevice, error) {
+func (h *Handle) DevlinkGetDeviceByName(Socket string, Bus string, Device string) (*DevlinkDevice, error) {
 	f, req, err := h.createCmdReq(Socket, DEVLINK_CMD_GET, Bus, Device)
 	if err != nil {
 		return nil, err
@@ -308,15 +308,15 @@ func (h *Handle) DevLinkGetDeviceByName(Socket string, Bus string, Device string
 // DevlinkGetDeviceByName provides a pointer to devlink device and nil error,
 // otherwise returns an error code.
 // Take Socket as either GENL_DEVLINK_NAME or as GENL_MLXDEVM_NAME.
-func DevLinkGetDeviceByName(Socket string, Bus string, Device string) (*DevlinkDevice, error) {
-	return pkgHandle.DevLinkGetDeviceByName(Socket, Bus, Device)
+func DevlinkGetDeviceByName(Socket string, Bus string, Device string) (*DevlinkDevice, error) {
+	return pkgHandle.DevlinkGetDeviceByName(Socket, Bus, Device)
 }
 
-// DevLinkSetEswitchMode sets eswitch mode if able to set successfully or
+// DevlinkSetEswitchMode sets eswitch mode if able to set successfully or
 // returns an error code.
 // Equivalent to: `devlink dev eswitch set $dev mode switchdev`
 // Equivalent to: `devlink dev eswitch set $dev mode legacy`
-func (h *Handle) DevLinkSetEswitchMode(Socket string, Dev *DevlinkDevice, NewMode string) error {
+func (h *Handle) DevlinkSetEswitchMode(Socket string, Dev *DevlinkDevice, NewMode string) error {
 	mode, err := eswitchStringToMode(NewMode)
 	if err != nil {
 		return err
@@ -333,12 +333,12 @@ func (h *Handle) DevLinkSetEswitchMode(Socket string, Dev *DevlinkDevice, NewMod
 	return err
 }
 
-// DevLinkSetEswitchMode sets eswitch mode if able to set successfully or
+// DevlinkSetEswitchMode sets eswitch mode if able to set successfully or
 // returns an error code.
 // Equivalent to: `devlink dev eswitch set $dev mode switchdev`
 // Equivalent to: `devlink dev eswitch set $dev mode legacy`
-func DevLinkSetEswitchMode(Socket string, Dev *DevlinkDevice, NewMode string) error {
-	return pkgHandle.DevLinkSetEswitchMode(Socket, Dev, NewMode)
+func DevlinkSetEswitchMode(Socket string, Dev *DevlinkDevice, NewMode string) error {
+	return pkgHandle.DevlinkSetEswitchMode(Socket, Dev, NewMode)
 }
 
 func (port *DevlinkPort) parseAttributes(attrs []syscall.NetlinkRouteAttr) error {
@@ -403,7 +403,7 @@ func (port *DevlinkPort) parseAttributes(attrs []syscall.NetlinkRouteAttr) error
 	return nil
 }
 
-func parseDevLinkAllPortList(msgs [][]byte) ([]*DevlinkPort, error) {
+func parseDevlinkAllPortList(msgs [][]byte) ([]*DevlinkPort, error) {
 	ports := make([]*DevlinkPort, 0, len(msgs))
 	for _, m := range msgs {
 		attrs, err := nl.ParseRouteAttr(m[nl.SizeofGenlmsg:])
@@ -419,9 +419,9 @@ func parseDevLinkAllPortList(msgs [][]byte) ([]*DevlinkPort, error) {
 	return ports, nil
 }
 
-// DevLinkGetPortList provides a pointer to devlink ports and nil error,
+// DevlinkGetAllPortList provides a pointer to devlink ports and nil error,
 // otherwise returns an error code.
-func (h *Handle) DevLinkGetAllPortList(Socket string) ([]*DevlinkPort, error) {
+func (h *Handle) DevlinkGetAllPortList(Socket string) ([]*DevlinkPort, error) {
 	f, err := h.GenlFamilyGet(Socket)
 	if err != nil {
 		return nil, err
@@ -437,17 +437,17 @@ func (h *Handle) DevLinkGetAllPortList(Socket string) ([]*DevlinkPort, error) {
 	if err != nil {
 		return nil, err
 	}
-	ports, err := parseDevLinkAllPortList(msgs)
+	ports, err := parseDevlinkAllPortList(msgs)
 	if err != nil {
 		return nil, err
 	}
 	return ports, nil
 }
 
-// DevLinkGetPortList provides a pointer to devlink ports and nil error,
+// DevlinkGetAllPortList provides a pointer to devlink ports and nil error,
 // otherwise returns an error code.
-func DevLinkGetAllPortList(Socket string) ([]*DevlinkPort, error) {
-	return pkgHandle.DevLinkGetAllPortList(Socket)
+func DevlinkGetAllPortList(Socket string) ([]*DevlinkPort, error) {
+	return pkgHandle.DevlinkGetAllPortList(Socket)
 }
 
 func parseDevlinkPortMsg(msgs [][]byte) (*DevlinkPort, error) {
@@ -463,9 +463,9 @@ func parseDevlinkPortMsg(msgs [][]byte) (*DevlinkPort, error) {
 	return port, nil
 }
 
-// DevLinkGetPortByIndexprovides a pointer to devlink device and nil error,
+// DevlinkGetPortByIndex provides a pointer to devlink device and nil error,
 // otherwise returns an error code.
-func (h *Handle) DevLinkGetPortByIndex(Socket string, Bus string, Device string, PortIndex uint32) (*DevlinkPort, error) {
+func (h *Handle) DevlinkGetPortByIndex(Socket string, Bus string, Device string, PortIndex uint32) (*DevlinkPort, error) {
 
 	_, req, err := h.createCmdReq(Socket, DEVLINK_CMD_PORT_GET, Bus, Device)
 	if err != nil {
@@ -482,15 +482,15 @@ func (h *Handle) DevLinkGetPortByIndex(Socket string, Bus string, Device string,
 	return port, err
 }
 
-// DevLinkGetPortByIndex provides a pointer to devlink portand nil error,
+// DevlinkGetPortByIndex provides a pointer to devlink portand nil error,
 // otherwise returns an error code.
-func DevLinkGetPortByIndex(Socket string, Bus string, Device string, PortIndex uint32) (*DevlinkPort, error) {
-	return pkgHandle.DevLinkGetPortByIndex(Socket, Bus, Device, PortIndex)
+func DevlinkGetPortByIndex(Socket string, Bus string, Device string, PortIndex uint32) (*DevlinkPort, error) {
+	return pkgHandle.DevlinkGetPortByIndex(Socket, Bus, Device, PortIndex)
 }
 
-// DevLinkPortAdd adds a devlink port and returns a port on success
+// DevlinkPortAdd adds a devlink port and returns a port on success
 // otherwise returns nil port and an error code.
-func (h *Handle) DevLinkPortAdd(Socket string, Bus string, Device string, Flavour uint16, Attrs DevLinkPortAddAttrs) (*DevlinkPort, error) {
+func (h *Handle) DevlinkPortAdd(Socket string, Bus string, Device string, Flavour uint16, Attrs DevlinkPortAddAttrs) (*DevlinkPort, error) {
 	_, req, err := h.createCmdReq(Socket, DEVLINK_CMD_PORT_NEW, Bus, Device)
 	if err != nil {
 		return nil, err
@@ -518,14 +518,14 @@ func (h *Handle) DevLinkPortAdd(Socket string, Bus string, Device string, Flavou
 	return port, err
 }
 
-// DevLinkPortAdd adds a devlink port and returns a port on success
+// DevlinkPortAdd adds a devlink port and returns a port on success
 // otherwise returns nil port and an error code.
-func DevLinkPortAdd(Socket string, Bus string, Device string, Flavour uint16, Attrs DevLinkPortAddAttrs) (*DevlinkPort, error) {
-	return pkgHandle.DevLinkPortAdd(Socket, Bus, Device, Flavour, Attrs)
+func DevlinkPortAdd(Socket string, Bus string, Device string, Flavour uint16, Attrs DevlinkPortAddAttrs) (*DevlinkPort, error) {
+	return pkgHandle.DevlinkPortAdd(Socket, Bus, Device, Flavour, Attrs)
 }
 
-// DevLinkPortDel deletes a devlink port and returns success or error code.
-func (h *Handle) DevLinkPortDel(Socket string, Bus string, Device string, PortIndex uint32) error {
+// DevlinkPortDel deletes a devlink port and returns success or error code.
+func (h *Handle) DevlinkPortDel(Socket string, Bus string, Device string, PortIndex uint32) error {
 	_, req, err := h.createCmdReq(Socket, DEVLINK_CMD_PORT_DEL, Bus, Device)
 	if err != nil {
 		return err
@@ -536,9 +536,9 @@ func (h *Handle) DevLinkPortDel(Socket string, Bus string, Device string, PortIn
 	return err
 }
 
-// DevLinkPortDel deletes a devlink port and returns success or error code.
-func DevLinkPortDel(Socket string, Bus string, Device string, PortIndex uint32) error {
-	return pkgHandle.DevLinkPortDel(Socket, Bus, Device, PortIndex)
+// DevlinkPortDel deletes a devlink port and returns success or error code.
+func DevlinkPortDel(Socket string, Bus string, Device string, PortIndex uint32) error {
+	return pkgHandle.DevlinkPortDel(Socket, Bus, Device, PortIndex)
 }
 
 // DevlinkPortFnSet sets one or more port function attributes specified by the attribute mask.

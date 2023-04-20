@@ -28,14 +28,14 @@ import (
 )
 
 func main() {
-    var portAttr mlxdevm.DevLinkPortAddAttrs
+    var portAttr mlxdevm.DevlinkPortAddAttrs
     
     portAttr.PfNumber = 0
     
     portAttr.SfNumber = 88 // Any number starting 0 to 999
     portAttr.SfNumberValid = true
     // To use upstream devlink interface
-    dl_port, err := mlxdevm.DevLinkPortAdd("devlink", "pci", "0000:06:00.0", mlxdevm.DEVLINK_PORT_FLAVOUR_PCI_SF, portAttr)
+    dl_port, err := mlxdevm.DevlinkPortAdd("devlink", "pci", "0000:06:00.0", mlxdevm.DEVLINK_PORT_FLAVOUR_PCI_SF, portAttr)
     if err != nil {
         return
     }
@@ -43,7 +43,7 @@ func main() {
     
     portAttr.SfNumber = 99 // Any number starting 0 to 999
     // To use mlxdevm interface
-    dl_port2, err2 := mlxdevm.DevLinkPortAdd("mlxdevm", "pci", "0000:06:00.0", mlxdevm.DEVLINK_PORT_FLAVOUR_PCI_SF, portAttr)
+    dl_port2, err2 := mlxdevm.DevlinkPortAdd("mlxdevm", "pci", "0000:06:00.0", mlxdevm.DEVLINK_PORT_FLAVOUR_PCI_SF, portAttr)
     if err2 != nil {
         return
     }
