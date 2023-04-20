@@ -73,7 +73,7 @@ func TestDevlinkAddDelSfPort(t *testing.T) {
 	}
 	addAttrs.SfNumberValid = true
 	addAttrs.SfNumber = uint32(sfnum)
-	addAttrs.PfNumber = 0
+	addAttrs.PfNumber = uint16(pfnum)
 	port, err2 := DevlinkPortAdd(socket, dev.BusName, dev.DeviceName, 7, addAttrs)
 	if err2 != nil {
 		t.Fatal(err2)
@@ -114,7 +114,7 @@ func TestDevlinkSfPortFnSet(t *testing.T) {
 	}
 	addAttrs.SfNumberValid = true
 	addAttrs.SfNumber = uint32(sfnum)
-	addAttrs.PfNumber = 0
+	addAttrs.PfNumber = uint16(pfnum)
 	port, err2 := DevlinkPortAdd(socket, dev.BusName, dev.DeviceName, 7, addAttrs)
 	if err2 != nil {
 		t.Fatal(err2)
