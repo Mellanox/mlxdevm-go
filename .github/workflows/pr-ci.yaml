@@ -3,7 +3,7 @@ on: [pull_request]
 permissions:
   contents: read
 env:
-  go_version: '1.19'
+  go_version: '1.21'
 jobs:
   lint-code:
     name: golangci-lint
@@ -19,7 +19,7 @@ jobs:
       - name: Golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.49.0
+          version: v1.55.2
 
   build-code:
     name: sample-build
