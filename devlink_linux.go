@@ -9,6 +9,8 @@ import (
 
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
+
+	modnl "github.com/Mellanox/mlxdevm-go/netlink-mods/nl"
 )
 
 // DevlinkDevEswitchAttr represents device's eswitch attributes
@@ -94,6 +96,169 @@ type DevlinkPortAddAttrs struct {
 var (
 	native = nl.NativeEndian()
 )
+
+// DevlinkResource represents a device resource
+type DevlinkResource struct {
+	Name            string
+	ID              uint64
+	Size            uint64
+	SizeNew         uint64
+	SizeMin         uint64
+	SizeMax         uint64
+	SizeGranularity uint64
+	PendingChange   bool
+	Unit            uint8
+	SizeValid       bool
+	OCCValid        bool
+	OCCSize         uint64
+	Parent          *DevlinkResource
+	Children        []DevlinkResource
+}
+
+// parseAttributes parses provided Netlink Attributes and populates DevlinkResource, returns error if occured
+func (dlr *DevlinkResource) parseAttributes(attrs map[uint16]syscall.NetlinkRouteAttr) error {
+	var attr syscall.NetlinkRouteAttr
+	var ok bool
+
+	// mandatory attributes
+	attr, ok = attrs[DEVLINK_ATTR_RESOURCE_ID]
+	if !ok {
+		return fmt.Errorf("missing resource id")
+	}
+	dlr.ID = native.Uint64(attr.Value)
+
+	attr, ok = attrs[DEVLINK_ATTR_RESOURCE_NAME]
+	if !ok {
+		return fmt.Errorf("missing resource name")
+	}
+	dlr.Name = nl.BytesToString(attr.Value)
+
+	attr, ok = attrs[DEVLINK_ATTR_RESOURCE_SIZE]
+	if !ok {
+		return fmt.Errorf("missing resource size")
+	}
+	dlr.Size = native.Uint64(attr.Value)
+
+	attr, ok = attrs[DEVLINK_ATTR_RESOURCE_SIZE_GRAN]
+	if !ok {
+		return fmt.Errorf("missing resource size granularity")
+	}
+	dlr.SizeGranularity = native.Uint64(attr.Value)
+
+	attr, ok = attrs[DEVLINK_ATTR_RESOURCE_UNIT]
+	if !ok {
+		return fmt.Errorf("missing resource unit")
+	}
+	dlr.Unit = uint8(attr.Value[0])
+
+	attr, ok = attrs[DEVLINK_ATTR_RESOURCE_SIZE_MIN]
+	if !ok {
+		return fmt.Errorf("missing resource size min")
+	}
+	dlr.SizeMin = native.Uint64(attr.Value)
+
+	attr, ok = attrs[DEVLINK_ATTR_RESOURCE_SIZE_MAX]
+	if !ok {
+		return fmt.Errorf("missing resource size max")
+	}
+	dlr.SizeMax = native.Uint64(attr.Value)
+
+	// optional attributes
+	attr, ok = attrs[DEVLINK_ATTR_RESOURCE_OCC]
+	if ok {
+		dlr.OCCSize = native.Uint64(attr.Value)
+		dlr.OCCValid = true
+	}
+
+	attr, ok = attrs[DEVLINK_ATTR_RESOURCE_SIZE_VALID]
+	if ok {
+		dlr.SizeValid = uint8(attr.Value[0]) != 0
+	}
+
+	attr, ok = attrs[DEVLINK_ATTR_RESOURCE_SIZE_NEW]
+	dlr.SizeNew = dlr.Size
+	if ok {
+		dlr.SizeNew = native.Uint64(attr.Value)
+	}
+
+	dlr.PendingChange = dlr.Size != dlr.SizeNew
+
+	attr, ok = attrs[DEVLINK_ATTR_RESOURCE_LIST]
+	if ok {
+		// handle nested resoruces recursively
+		subResources, err := nl.ParseRouteAttr(attr.Value)
+		if err != nil {
+			return err
+		}
+
+		for _, subresource := range subResources {
+			resource := DevlinkResource{Parent: dlr}
+			attrs, err := modnl.ParseRouteAttrAsMap(subresource.Value)
+			if err != nil {
+				return err
+			}
+			err = resource.parseAttributes(attrs)
+			if err != nil {
+				return fmt.Errorf("failed to parse child resource, parent:%s. %w", dlr.Name, err)
+			}
+			dlr.Children = append(dlr.Children, resource)
+		}
+	}
+	return nil
+}
+
+// DevlinkResources represents all devlink resources of a devlink device
+type DevlinkResources struct {
+	Bus       string
+	Device    string
+	Resources []DevlinkResource
+}
+
+// parseAttributes parses provided Netlink Attributes and populates DevlinkResources, returns error if occured
+func (dlrs *DevlinkResources) parseAttributes(attrs map[uint16]syscall.NetlinkRouteAttr) error {
+	var attr syscall.NetlinkRouteAttr
+	var ok bool
+
+	// Bus
+	attr, ok = attrs[DEVLINK_ATTR_BUS_NAME]
+	if !ok {
+		return fmt.Errorf("missing bus name")
+	}
+	dlrs.Bus = nl.BytesToString(attr.Value)
+
+	// Device
+	attr, ok = attrs[DEVLINK_ATTR_DEV_NAME]
+	if !ok {
+		return fmt.Errorf("missing device name")
+	}
+	dlrs.Device = nl.BytesToString(attr.Value)
+
+	// Resource List
+	attr, ok = attrs[DEVLINK_ATTR_RESOURCE_LIST]
+	if !ok {
+		return fmt.Errorf("missing resource list")
+	}
+
+	resourceAttrs, err := nl.ParseRouteAttr(attr.Value)
+	if err != nil {
+		return err
+	}
+
+	for _, resourceAttr := range resourceAttrs {
+		resource := DevlinkResource{}
+		attrs, err := modnl.ParseRouteAttrAsMap(resourceAttr.Value)
+		if err != nil {
+			return err
+		}
+		err = resource.parseAttributes(attrs)
+		if err != nil {
+			return fmt.Errorf("failed to parse root resoruces, %w", err)
+		}
+		dlrs.Resources = append(dlrs.Resources, resource)
+	}
+
+	return nil
+}
 
 func parseDevlinkDeviceList(msgs [][]byte) ([]*DevlinkDevice, error) {
 	devices := make([]*DevlinkDevice, 0, len(msgs))
@@ -270,6 +435,38 @@ func (h *Handle) createCmdReq(Socket string, cmd uint8, bus string, device strin
 	}
 	req := h.newNetlinkRequest(int(f.ID),
 		unix.NLM_F_REQUEST|unix.NLM_F_ACK)
+	req.AddData(msg)
+
+	b := make([]byte, len(bus)+1)
+	copy(b, bus)
+	data := nl.NewRtAttr(DEVLINK_ATTR_BUS_NAME, b)
+	req.AddData(data)
+
+	b = make([]byte, len(device)+1)
+	copy(b, device)
+	data = nl.NewRtAttr(DEVLINK_ATTR_DEV_NAME, b)
+	req.AddData(data)
+
+	return f, req, nil
+}
+
+// createCmdReqMod is like createCmdReq but uses modified netlink constructs
+func (h *Handle) createCmdReqMod(Socket string, cmd uint8, bus string, device string) (*GenlFamily, *modnl.NetlinkRequest, error) {
+	f, err := h.GenlFamilyGet(Socket)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	msg := &nl.Genlmsg{
+		Command: cmd,
+		Version: nl.GENL_DEVLINK_VERSION,
+	}
+	req, err := h.newNetlinkRequestMod(int(f.ID),
+		unix.NLM_F_REQUEST|unix.NLM_F_ACK)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	req.AddData(msg)
 
 	b := make([]byte, len(bus)+1)
@@ -767,4 +964,39 @@ func (h *Handle) DevlinkDevParamSet(Socket string, Bus string, Device string, Pa
 // Equivalent to: `mlxdevm dev param set $dev name disable_netdev value true cmode runtime`
 func DevlinkDevParamSet(Socket string, Bus string, Device string, ParamName string, NewValue string, NewCMode string) error {
 	return pkgHandle.DevlinkDevParamSet(Socket, Bus, Device, ParamName, NewValue, NewCMode)
+}
+
+// DevlinkGetDeviceResources returns devlink device resources from provided socket
+func DevlinkGetDeviceResources(socket string, bus string, device string) (*DevlinkResources, error) {
+	return pkgHandle.DevlinkGetDeviceResources(socket, bus, device)
+}
+
+// DevlinkGetDeviceResources returns devlink device resources from provided socket
+func (h *Handle) DevlinkGetDeviceResources(socket string, bus string, device string) (*DevlinkResources, error) {
+	_, req, err := h.createCmdReqMod(socket, DEVLINK_CMD_RESOURCE_DUMP, bus, device)
+	if err != nil {
+		return nil, err
+	}
+
+	respmsg, err := req.Execute(unix.NETLINK_GENERIC, 0)
+	if err != nil {
+		return nil, err
+	}
+	// expect just one msg
+	if len(respmsg) != 1 {
+		return nil, fmt.Errorf("expected only one nl response msg")
+	}
+
+	var resources DevlinkResources
+	attrs, err := modnl.ParseRouteAttrAsMap(respmsg[0][nl.SizeofGenlmsg:])
+	if err != nil {
+		return nil, err
+	}
+
+	err = resources.parseAttributes(attrs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse resource attributes. %w", err)
+	}
+
+	return &resources, nil
 }
