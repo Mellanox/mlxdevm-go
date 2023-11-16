@@ -261,6 +261,28 @@ func TestDevlinkDevParamSet(t *testing.T) {
 	}
 }
 
+func TestDevlinkGetDeviceResources(t *testing.T) {
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping test TestDevlinkDevParamSet in CI environment until test is fixed")
+	}
+
+	err := validateArgs(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := DevlinkGetDeviceResources(socket, bus, device)
+	if err != nil {
+		t.Fatalf("failed to get device(%s: %s/%s) resources. %s", socket, bus, device, err)
+	}
+
+	if res.Bus != bus || res.Device != device {
+		t.Fatalf("missmatching bus/device")
+	}
+
+	t.Logf("Resources: %+v", res)
+}
+
 var socket string
 var bus string
 var device string
