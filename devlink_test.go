@@ -55,8 +55,12 @@ func TestDevlinkGetAllPortList(t *testing.T) {
 	t.Log("devlink port count = ", len(ports))
 	for _, port := range ports {
 		t.Logf("Port: %+v", *port)
-		t.Logf("Port Function: %+v", *port.Fn)
-		t.Logf("Port Function Cap: %+v", *port.PortCap)
+		if port.Fn != nil {
+			t.Logf("Port Function: %+v", *port.Fn)
+		}
+		if port.PortCap != nil {
+			t.Logf("Port Function Cap: %+v", *port.PortCap)
+		}
 	}
 }
 
@@ -139,6 +143,13 @@ func TestDevlinkSfPortFnSet(t *testing.T) {
 	err2 = DevlinkPortFnSet(socket, dev.BusName, dev.DeviceName, port.PortIndex, stateAttr)
 	if err2 != nil {
 		t.Log("function state set err = ", err2)
+	}
+
+	stateAttr.FnAttrs.Trust = 1
+	stateAttr.TrustValid = true
+	err2 = DevlinkPortFnSet(socket, dev.BusName, dev.DeviceName, port.PortIndex, stateAttr)
+	if err2 != nil {
+		t.Fatal("function trust set err = ", err2)
 	}
 
 	port, err3 := DevlinkGetPortByIndex(socket, dev.BusName, dev.DeviceName, port.PortIndex)

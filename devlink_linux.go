@@ -35,6 +35,7 @@ type DevlinkPortFn struct {
 	HwAddr  net.HardwareAddr
 	State   uint8
 	OpState uint8
+	Trust   uint8
 }
 
 // DevlinkPortFnSetAttrs represents attributes to set
@@ -42,6 +43,7 @@ type DevlinkPortFnSetAttrs struct {
 	FnAttrs     DevlinkPortFn
 	HwAddrValid bool
 	StateValid  bool
+	TrustValid  bool
 }
 
 // DevlinkPortFnCap represents port function and its attributes
@@ -504,7 +506,7 @@ func DevlinkSetEswitchMode(Socket string, Dev *DevlinkDevice, NewMode string) er
 	return pkgHandle.DevlinkSetEswitchMode(Socket, Dev, NewMode)
 }
 
-func (port *DevlinkPort) parseAttributes(attrs []syscall.NetlinkRouteAttr) error {
+func (port *DevlinkPort) parseAttributes(Socket string, attrs []syscall.NetlinkRouteAttr) error {
 	for _, a := range attrs {
 		switch a.Attr.Type {
 		case DEVLINK_ATTR_BUS_NAME:
@@ -547,6 +549,13 @@ func (port *DevlinkPort) parseAttributes(attrs []syscall.NetlinkRouteAttr) error
 						port.Fn = &DevlinkPortFn{}
 					}
 					port.Fn.OpState = uint8(nested.Value[0])
+				case MLXDEVM_PORT_FN_ATTR_TRUST:
+					if Socket == GENL_MLXDEVM_NAME {
+						if port.Fn == nil {
+							port.Fn = &DevlinkPortFn{}
+						}
+						port.Fn.Trust = uint8(nested.Value[0])
+					}
 				case DEVLINK_PORT_FN_ATTR_EXT_CAP_ROCE:
 					if port.PortCap == nil {
 						port.PortCap = &DevlinkPortFnCap{}
@@ -566,7 +575,7 @@ func (port *DevlinkPort) parseAttributes(attrs []syscall.NetlinkRouteAttr) error
 	return nil
 }
 
-func parseDevlinkAllPortList(msgs [][]byte) ([]*DevlinkPort, error) {
+func parseDevlinkAllPortList(Socket string, msgs [][]byte) ([]*DevlinkPort, error) {
 	ports := make([]*DevlinkPort, 0, len(msgs))
 	for _, m := range msgs {
 		attrs, err := nl.ParseRouteAttr(m[nl.SizeofGenlmsg:])
@@ -574,7 +583,7 @@ func parseDevlinkAllPortList(msgs [][]byte) ([]*DevlinkPort, error) {
 			return nil, err
 		}
 		port := &DevlinkPort{}
-		if err = port.parseAttributes(attrs); err != nil {
+		if err = port.parseAttributes(Socket, attrs); err != nil {
 			return nil, err
 		}
 		ports = append(ports, port)
@@ -600,7 +609,7 @@ func (h *Handle) DevlinkGetAllPortList(Socket string) ([]*DevlinkPort, error) {
 	if err != nil {
 		return nil, err
 	}
-	ports, err := parseDevlinkAllPortList(msgs)
+	ports, err := parseDevlinkAllPortList(Socket, msgs)
 	if err != nil {
 		return nil, err
 	}
@@ -613,14 +622,14 @@ func DevlinkGetAllPortList(Socket string) ([]*DevlinkPort, error) {
 	return pkgHandle.DevlinkGetAllPortList(Socket)
 }
 
-func parseDevlinkPortMsg(msgs [][]byte) (*DevlinkPort, error) {
+func parseDevlinkPortMsg(Socket string, msgs [][]byte) (*DevlinkPort, error) {
 	m := msgs[0]
 	attrs, err := nl.ParseRouteAttr(m[nl.SizeofGenlmsg:])
 	if err != nil {
 		return nil, err
 	}
 	port := &DevlinkPort{}
-	if err = port.parseAttributes(attrs); err != nil {
+	if err = port.parseAttributes(Socket, attrs); err != nil {
 		return nil, err
 	}
 	return port, nil
@@ -641,7 +650,7 @@ func (h *Handle) DevlinkGetPortByIndex(Socket string, Bus string, Device string,
 	if err != nil {
 		return nil, err
 	}
-	port, err := parseDevlinkPortMsg(respmsg)
+	port, err := parseDevlinkPortMsg(Socket, respmsg)
 	return port, err
 }
 
@@ -677,7 +686,7 @@ func (h *Handle) DevlinkPortAdd(Socket string, Bus string, Device string, Flavou
 	if err != nil {
 		return nil, err
 	}
-	port, err := parseDevlinkPortMsg(respmsg)
+	port, err := parseDevlinkPortMsg(Socket, respmsg)
 	return port, err
 }
 
@@ -707,6 +716,10 @@ func DevlinkPortDel(Socket string, Bus string, Device string, PortIndex uint32) 
 // DevlinkPortFnSet sets one or more port function attributes specified by the attribute mask.
 // It returns 0 on success or error code.
 func (h *Handle) DevlinkPortFnSet(Socket string, Bus string, Device string, PortIndex uint32, FnAttrs DevlinkPortFnSetAttrs) error {
+	if FnAttrs.TrustValid && Socket != GENL_MLXDEVM_NAME {
+		return fmt.Errorf("setting 'trust' mode is only supported by netlink family '%s'", GENL_MLXDEVM_NAME)
+	}
+
 	_, req, err := h.createCmdReq(Socket, DEVLINK_CMD_PORT_SET, Bus, Device)
 	if err != nil {
 		return err
@@ -723,6 +736,11 @@ func (h *Handle) DevlinkPortFnSet(Socket string, Bus string, Device string, Port
 	if FnAttrs.StateValid {
 		fnAttr.AddRtAttr(DEVLINK_PORT_FN_ATTR_STATE, nl.Uint8Attr(FnAttrs.FnAttrs.State))
 	}
+
+	if FnAttrs.TrustValid {
+		fnAttr.AddRtAttr(MLXDEVM_PORT_FN_ATTR_TRUST, nl.Uint8Attr(FnAttrs.FnAttrs.Trust))
+	}
+
 	req.AddData(fnAttr)
 
 	_, err = req.Execute(unix.NETLINK_GENERIC, 0)
