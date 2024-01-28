@@ -7,8 +7,6 @@ import (
 	"github.com/vishvananda/netlink/nl"
 	"github.com/vishvananda/netns"
 	"golang.org/x/sys/unix"
-
-	modnl "github.com/Mellanox/mlxdevm-go/netlink-mods/nl"
 )
 
 // Empty handle used by the netlink package methods
@@ -158,17 +156,4 @@ func (h *Handle) newNetlinkRequest(proto, flags int) *nl.NetlinkRequest {
 		},
 		Sockets: h.sockets,
 	}
-}
-
-// newNetlinkRequestMod is like newNetlinkRequest but uses modified netlink constructs
-// returns error if handle with pre-created sockets are used.
-// TODO(adrianc): remove this function once bug in kernel (devlink resource) is fixed.
-// and switch to using newNetlinkRequest instead.
-func (h *Handle) newNetlinkRequestMod(proto, flags int) (*modnl.NetlinkRequest, error) {
-	// Do this so that package API still use nl package variable nextSeqNr
-	if h.sockets == nil {
-		return modnl.NewNetlinkRequest(proto, flags), nil
-	}
-	// no support for pre-created sockets.
-	return nil, fmt.Errorf("failed to create modified netlink request, pre-created sockets are not supported")
 }
