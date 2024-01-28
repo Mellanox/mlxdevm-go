@@ -9,8 +9,6 @@ import (
 
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
-
-	modnl "github.com/Mellanox/mlxdevm-go/netlink-mods/nl"
 )
 
 // DevlinkDevEswitchAttr represents device's eswitch attributes
@@ -193,7 +191,7 @@ func (dlr *DevlinkResource) parseAttributes(attrs map[uint16]syscall.NetlinkRout
 
 		for _, subresource := range subResources {
 			resource := DevlinkResource{Parent: dlr}
-			attrs, err := modnl.ParseRouteAttrAsMap(subresource.Value)
+			attrs, err := nl.ParseRouteAttrAsMap(subresource.Value)
 			if err != nil {
 				return err
 			}
@@ -246,7 +244,7 @@ func (dlrs *DevlinkResources) parseAttributes(attrs map[uint16]syscall.NetlinkRo
 
 	for _, resourceAttr := range resourceAttrs {
 		resource := DevlinkResource{}
-		attrs, err := modnl.ParseRouteAttrAsMap(resourceAttr.Value)
+		attrs, err := nl.ParseRouteAttrAsMap(resourceAttr.Value)
 		if err != nil {
 			return err
 		}
@@ -435,38 +433,6 @@ func (h *Handle) createCmdReq(Socket string, cmd uint8, bus string, device strin
 	}
 	req := h.newNetlinkRequest(int(f.ID),
 		unix.NLM_F_REQUEST|unix.NLM_F_ACK)
-	req.AddData(msg)
-
-	b := make([]byte, len(bus)+1)
-	copy(b, bus)
-	data := nl.NewRtAttr(DEVLINK_ATTR_BUS_NAME, b)
-	req.AddData(data)
-
-	b = make([]byte, len(device)+1)
-	copy(b, device)
-	data = nl.NewRtAttr(DEVLINK_ATTR_DEV_NAME, b)
-	req.AddData(data)
-
-	return f, req, nil
-}
-
-// createCmdReqMod is like createCmdReq but uses modified netlink constructs
-func (h *Handle) createCmdReqMod(Socket string, cmd uint8, bus string, device string) (*GenlFamily, *modnl.NetlinkRequest, error) {
-	f, err := h.GenlFamilyGet(Socket)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	msg := &nl.Genlmsg{
-		Command: cmd,
-		Version: nl.GENL_DEVLINK_VERSION,
-	}
-	req, err := h.newNetlinkRequestMod(int(f.ID),
-		unix.NLM_F_REQUEST|unix.NLM_F_ACK)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	req.AddData(msg)
 
 	b := make([]byte, len(bus)+1)
@@ -973,7 +939,7 @@ func DevlinkGetDeviceResources(socket string, bus string, device string) (*Devli
 
 // DevlinkGetDeviceResources returns devlink device resources from provided socket
 func (h *Handle) DevlinkGetDeviceResources(socket string, bus string, device string) (*DevlinkResources, error) {
-	_, req, err := h.createCmdReqMod(socket, DEVLINK_CMD_RESOURCE_DUMP, bus, device)
+	_, req, err := h.createCmdReq(socket, DEVLINK_CMD_RESOURCE_DUMP, bus, device)
 	if err != nil {
 		return nil, err
 	}
@@ -988,7 +954,7 @@ func (h *Handle) DevlinkGetDeviceResources(socket string, bus string, device str
 	}
 
 	var resources DevlinkResources
-	attrs, err := modnl.ParseRouteAttrAsMap(respmsg[0][nl.SizeofGenlmsg:])
+	attrs, err := nl.ParseRouteAttrAsMap(respmsg[0][nl.SizeofGenlmsg:])
 	if err != nil {
 		return nil, err
 	}
