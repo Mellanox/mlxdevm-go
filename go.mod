@@ -4,9 +4,9 @@ go 1.21
 
 require (
 	github.com/stretchr/testify v1.8.2
-	github.com/vishvananda/netlink v1.2.1-beta.2.0.20231112201456-95ab6696a5e0
+	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240126170848-06219cde3e81
 	github.com/vishvananda/netns v0.0.4
-	golang.org/x/sys v0.14.0
+	golang.org/x/sys v0.16.0
 )
 
 require (
