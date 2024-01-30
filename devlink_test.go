@@ -9,8 +9,10 @@ import (
 	"net"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func validateArgs(t *testing.T) error {
@@ -115,41 +117,56 @@ func TestDevlinkSfPortFnSet(t *testing.T) {
 	addAttrs.SfNumberValid = true
 	addAttrs.SfNumber = uint32(sfnum)
 	addAttrs.PfNumber = uint16(pfnum)
-	port, err2 := DevlinkPortAdd(socket, dev.BusName, dev.DeviceName, 7, addAttrs)
-	if err2 != nil {
-		t.Fatal(err2)
+	port, err := DevlinkPortAdd(socket, dev.BusName, dev.DeviceName, 7, addAttrs)
+	if err != nil {
+		t.Fatal(err)
 		return
 	}
 	t.Log(*port)
 	if port.Fn != nil {
 		t.Log("function attributes = ", *port.Fn)
 	}
+
+	defer func() {
+		t.Log("devlink port delete")
+		err = DevlinkPortDel(socket, dev.BusName, dev.DeviceName, port.PortIndex)
+		assert.NoError(t, err)
+	}()
+
 	macAttr := DevlinkPortFnSetAttrs{
 		FnAttrs: DevlinkPortFn{
 			HwAddr: net.HardwareAddr{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
 		},
 		HwAddrValid: true,
 	}
-	err2 = DevlinkPortFnSet(socket, dev.BusName, dev.DeviceName, port.PortIndex, macAttr)
-	if err2 != nil {
-		t.Log("function mac set err = ", err2)
+	err = DevlinkPortFnSet(socket, dev.BusName, dev.DeviceName, port.PortIndex, macAttr)
+	if err != nil {
+		t.Log("function mac set err = ", err)
 	}
 	stateAttr.FnAttrs.State = 1
 	stateAttr.StateValid = true
-	err2 = DevlinkPortFnSet(socket, dev.BusName, dev.DeviceName, port.PortIndex, stateAttr)
-	if err2 != nil {
-		t.Log("function state set err = ", err2)
+	err = DevlinkPortFnSet(socket, dev.BusName, dev.DeviceName, port.PortIndex, stateAttr)
+	if err != nil {
+		t.Log("function state set err = ", err)
 	}
 
-	port, err3 := DevlinkGetPortByIndex(socket, dev.BusName, dev.DeviceName, port.PortIndex)
-	if err3 == nil {
-		t.Log(*port)
-		t.Log(*port.Fn)
-	}
-	err2 = DevlinkPortDel(socket, dev.BusName, dev.DeviceName, port.PortIndex)
-	if err2 != nil {
-		t.Fatal(err2)
-	}
+	port, err = DevlinkGetPortByIndex(socket, dev.BusName, dev.DeviceName, port.PortIndex)
+	require.NoError(t, err)
+	t.Log(*port)
+	t.Log(*port.Fn)
+
+	auxDev, err := GetSFAuxDev(uint32(sfnum))
+	require.NoError(t, err)
+
+	err = DeploySF(auxDev)
+	require.NoError(t, err, "fail to deploy sf")
+
+	// give a few seconds to commplete SF deployment
+	time.Sleep(2 * time.Second)
+	port2, _ := DevlinkGetPortByIndex(socket, dev.BusName, dev.DeviceName, port.PortIndex)
+	t.Log(*port2)
+	t.Log(*port2.Fn)
+	require.Equal(t, port2.Fn.OpState, uint8(1), "fail to bind SF driver")
 }
 
 func TestDevlinkPortFnCapSet(t *testing.T) {
