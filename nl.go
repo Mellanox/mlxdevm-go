@@ -104,6 +104,8 @@ const (
 	DEVLINK_PORT_FUNCTION_ATTR_HW_ADDR = 1
 	DEVLINK_PORT_FN_ATTR_STATE         = 2
 	DEVLINK_PORT_FN_ATTR_OPSTATE       = 3
+	// attributes supported by genric NL 'mlxdevm'
+	MLXDEVM_PORT_FN_ATTR_TRUST = 4
 )
 
 const (
